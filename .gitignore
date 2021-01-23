@@ -126,3 +126,4 @@ dmypy.json
 
 # Folders
 temp/*
+data/*
