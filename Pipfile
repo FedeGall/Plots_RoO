@@ -13,6 +13,7 @@ xlrd = "*"
 ipykernel = "*"
 dash = "*"
 dash-bootstrap-components = "*"
+tqdm = "*"
 
 [requires]
 python_version = "3.8"
