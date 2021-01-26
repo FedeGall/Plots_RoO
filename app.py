@@ -19,9 +19,11 @@ input_path = Path('data/')
 df = pd.DataFrame()
 
 for year in range(2007, 2019):
-    temp_df = pd.read_csv(input_path / f'slice_{year}.csv', dtype = {'origin':'str', 'destination': 'str', 'product_code': 'str'})
+    temp_df = pd.read_csv(input_path / f'slice_{year}.csv', dtype = {'product_code': 'str'})
     temp_df['product_code'] = temp_df['product_code'].apply(lambda x: '0' + x if len(x) == 1 else x)
     temp_df['product_code'] = temp_df['product_code'].apply(lambda x: '0' + x if len(x) == 5 and re.match(r'[0-9]{5}', x) else x)
+    temp_df['value_log'] = np.log(temp_df['value'])
+    temp_df['value_growth'] = temp_df['value_change']/(temp_df['value'] - tempx_df['value_change'])
     df = df.append(temp_df, ignore_index=True)
 
 importers = set(df['destination_name'].unique())
