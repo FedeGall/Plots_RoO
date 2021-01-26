@@ -7,6 +7,13 @@ from pathlib import Path
 
 from plots_layout import *
 
+app = dash.Dash(__name__)
+
+app.title = 'South Korea trade flows'
+
+#for heroku to run correctly
+server = app.server
+
 input_path = Path('data/')
 
 df = pd.DataFrame()
@@ -21,8 +28,6 @@ importers = set(df['destination_name'].unique())
 exporters = set(df['origin_name'].unique())
 countries = list(importers.union(exporters))
 countries.sort()
-
-app = dash.Dash(__name__)
 
 app.layout = html.Div([
     dcc.Dropdown(
@@ -87,4 +92,5 @@ def update_line_chart(country, hs, plot_type):
         fig = layout_multi(filtered_df, country, plot_type)
         return fig
 
-app.run_server(debug=False)
+if __name__ == '__main__':
+   app.run_server(debug=False)
