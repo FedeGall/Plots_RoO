@@ -87,4 +87,4 @@ def update_line_chart(country, hs, plot_type):
         fig = layout_multi(filtered_df, country, plot_type)
         return fig
 
-app.run_server(debug=True)
+app.run_server(debug=False)
