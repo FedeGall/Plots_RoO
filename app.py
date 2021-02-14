@@ -9,90 +9,52 @@ from plots_layout import *
 
 app = dash.Dash(__name__)
 
-app.title = 'South Korea trade flows'
+app.title = 'Share Trade Flows'
 
 #for heroku to run correctly
 server = app.server
 
 input_path = Path('data/')
 
-df = pd.DataFrame()
+mex_imp_df = pd.read_csv(input_path / f'mex_import.csv')
+mex_exp_df = pd.read_csv(input_path / f'mex_export.csv')
+kor_imp_df = pd.read_csv(input_path / f'kor_import.csv')
+kor_exp_df = pd.read_csv(input_path / f'kor_export.csv')
+mex_imp_df = mex_imp_df[mex_imp_df['origin_name'] != 'EU27']
+mex_exp_df = mex_exp_df[mex_exp_df['destination_name'] != 'EU27']
+kor_imp_df = kor_imp_df[kor_imp_df['origin_name'] != 'EU27']
+kor_exp_df = kor_exp_df[kor_exp_df['destination_name'] != 'EU27']
 
-for year in range(2007, 2019):
-    temp_df = pd.read_csv(input_path / f'slice_{year}.csv', dtype = {'product_code': 'str'})
-    temp_df['product_code'] = temp_df['product_code'].apply(lambda x: '0' + x if len(x) == 1 else x)
-    temp_df['product_code'] = temp_df['product_code'].apply(lambda x: '0' + x if len(x) == 5 and re.match(r'[0-9]{5}', x) else x)
-    temp_df['value_log'] = np.log(temp_df['value'])
-    temp_df['value_growth'] = temp_df['value_change']/(temp_df['value'] - temp_df['value_change'])
-    df = df.append(temp_df, ignore_index=True)
-
-importers = set(df['destination_name'].unique())
-exporters = set(df['origin_name'].unique())
-countries = list(importers.union(exporters))
-countries.sort()
+dict_industries = {"Agri_Food": [1, 24], "Mineral products": [25, 27], "Chemical": [28, 38],
+                   "Plastic/Rubbers": [39, 40], "Raw Hide": [41, 43], "Wood Products": [44, 49],
+                   "Textiles": [50, 63], "Footwears": [64, 71], "Base metal": [72, 83],
+                   "Machinery/Elec. Equip": [84, 85], "Vehicle": [86, 89], "Optical/Photo. Instr.": [90, 92],
+                   "Other": [93, 99], "Total": [101, 102]}
 
 app.layout = html.Div([
     dcc.Dropdown(
-        id="trade_partner",
-        options=[{"label": x, "value": x} 
-                 for x in countries],
-        value=['EU28'],
-        multi = True
-    ),
-    dbc.RadioItems(
-        options=[
-            {"label": "6-digit codes", "value": "6-digit codes"},
-            {"label": "2-digit codes", "value": "2-digit codes"},
-            {"label": "Industry", "value": "Industry"},
-        ],
-        value="Industry",
-        inline = True,
-        id="radioitems-input",
-    ),
-    dcc.Dropdown(
         id="product-dropdown",
+        options=[{"label": x, "value": x} 
+                 for x in dict_industries.keys()],
+        value = 'Total',
         placeholder="Select a product classification",
-        value = 'total',
     ),
-    dbc.RadioItems(
-        options=[
-            {"label": "Log", "value": "Log"},
-            {"label": "Growth rate", "value": "Growth rate"},
-        ],
-        value="Log",
-        inline = True,
-        id="radioitems-type",
+    html.Div(
+    [
+        html.P("Type the desired ranking (based on 2018 data)"),
+        dbc.Input(id="styled-numeric-input", type="number", min=1, step=1, value = 3),
+    ],
     ),
     dcc.Graph(id="line-chart"),
 ])
 
 @app.callback(
-    Output('product-dropdown', 'options'),
-    [Input("trade_partner", "value"),
-    Input('radioitems-input', 'value')])
-def update_product_dropdown(country, classification):
-    if len(country) == 0:
-        country.append('EU28')
-    filtered_df = df[(df['origin_name'].isin(country)) | (df['destination_name'].isin(country))].copy()
-    product_dict = product_choice(filtered_df)
-    return [{'label': i, 'value': i} for i in product_dict[classification]]
-
-@app.callback(
     Output("line-chart", "figure"), 
-    [Input("trade_partner", "value"),
-    Input("product-dropdown", "value"),
-    Input("radioitems-type", "value")])
-def update_line_chart(country, hs, plot_type):
-    if len(country) == 0:
-        country.append('EU28')
-    filtered_df = df[(df['origin_name'].isin(country)) | (df['destination_name'].isin(country))].copy()
-    filtered_df = filtered_df[filtered_df['product_code'] == hs]
-    if len(country) == 1:
-        fig = layout_single(filtered_df, plot_type)
-        return fig
-    elif len(country) > 1:
-        fig = layout_multi(filtered_df, country, plot_type)
-        return fig
+    [Input("styled-numeric-input", "value"),
+    Input("product-dropdown", "value")])
+def update_line_chart(top, industry):
+    fig = layout_share(mex_imp_df, mex_exp_df, kor_imp_df, kor_exp_df, industry, top)
+    return fig
 
 if __name__ == '__main__':
-   app.run_server(debug=False)
+   app.run_server(debug=True)

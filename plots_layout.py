@@ -89,3 +89,47 @@ def layout_multi(df, country_list, plot_type):
     fig.update_yaxes(showgrid=False, gridwidth=1, gridcolor='lightgrey')
     fig.update_yaxes(zeroline=True, zerolinewidth=2, zerolinecolor='black')
     return fig
+
+def layout_share(mex_imp, mex_exp, kor_imp, kor_exp, industry, top):
+    for df, flow in [(mex_imp, 'mex_import'), (mex_exp, 'mex_export'), (kor_imp, 'kor_import'), (kor_exp, 'kor_export')]:
+        if industry == 'Total':
+            original_df = df[~df.duplicated(subset = ['year', 'origin_name', 'destination_name'])].copy()
+            original_df.sort_values(by = ['year', 'export_share'], ascending = False, inplace = True)
+            original_df['ranking'] = original_df.groupby('year')['export_share'].rank(method = 'dense', ascending = False)
+        else:
+            original_df = df[df['industry'] == industry].copy()
+            original_df.sort_values(by = ['year', 'export_share_ind'], ascending = False, inplace = True)
+            original_df['ranking'] = original_df.groupby('year')['export_share_ind'].rank(method = 'dense', ascending = False)
+        temp_df = original_df[(original_df['ranking'] <= top) & (original_df['year'] == 2018)].copy()
+        if flow == 'mex_import':
+            top_imp_mex = list(temp_df['origin_name'])
+            mex_imp = original_df.copy()
+        elif flow == 'mex_export':
+            top_exp_mex = list(temp_df['destination_name'])
+            mex_exp = original_df.copy()
+        if flow == 'kor_import':
+            top_imp_kor = list(temp_df['origin_name'])
+            kor_imp = original_df.copy()
+        elif flow == 'kor_export':
+            top_exp_kor = list(temp_df['destination_name'])
+            kor_exp = original_df.copy()
+    fig = make_subplots(rows=2, cols=2, subplot_titles = ("Korean Imports", " Korean Exports", "Mexican Imports", "Mexican exports"), shared_xaxes = True, vertical_spacing = 0.1, row_heights = [0.5, 0.5])
+    for countries, df, row, col_sub, col in [(top_imp_mex, mex_imp, 2, 1, 'origin_name'), (top_exp_mex, mex_exp, 2, 2, 'destination_name'), (top_imp_kor, kor_imp, 1, 1, 'origin_name'), (top_exp_kor, kor_exp, 1, 2, 'destination_name')]:
+        for country in countries:
+            df_plot = df[df[col] == country].copy()
+            x = df_plot['year'].copy()
+            if industry == 'Total':
+                y = df_plot['export_share'].copy()
+                text = [f"Year: {df_plot.iloc[indice]['year']} <br>Country: {country} <br>Share: {df_plot.iloc[indice]['export_share']:,.2f} <br>Ranking: {df_plot.iloc[indice]['ranking']:,.2f}" for indice in range(len(df_plot))]
+            else:
+                y = df_plot['export_share_ind'].copy()
+                text = [f"Year: {df_plot.iloc[indice]['year']} <br>Country: {country} <br>Share: {df_plot.iloc[indice]['export_share_ind']:,.2f} <br>Ranking: {df_plot.iloc[indice]['ranking']:,.2f}" for indice in range(len(df_plot))]
+            fig.add_trace(go.Scatter(x = x, y = y, mode = 'lines+markers', name = f"{country}",
+                                    hoverinfo = "text", hovertext = text),
+                        row = row, col = col_sub)
+    fig.update_layout(plot_bgcolor = 'white', paper_bgcolor = 'white', height=1000)
+    fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='lightgrey')
+    fig.update_xaxes(tickformat = 'Y')
+    fig.update_yaxes(showgrid=False, gridwidth=1, gridcolor='lightgrey')
+    fig.update_yaxes(zeroline=True, zerolinewidth=2, zerolinecolor='black')
+    return fig
